@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>船体ブロック進捗管理システム</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        margin: 20px;
+      }
+      .btn {
+        padding: 10px 15px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .btn:hover {
+        background-color: #0056b3;
+      }
+      #result {
+        margin-top: 15px;
+        padding: 10px;
+        border-radius: 4px;
+        font-weight: bold;
+      }
+      .success {
+        background-color: #d4edda;
+        color: #155724;
+      }
+      .error {
+        background-color: #f8d7da;
+        color: #721c24;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>船体ブロック進捗管理システム</h1>
+    <button id="initBtn" class="btn">DB初期化を実行</button>
+    <div id="result"></div>
+
+    <script>
+      document.getElementById("initBtn").addEventListener("click", async () => {
+        const resultDiv = document.getElementById("result");
+        resultDiv.className = "";
+        resultDiv.textContent = "処理中...";
+
+        try {
+          const response = await fetch("/api/init-db", {
+            method: "POST",
+          });
+
+          const data = await response.json();
+          console.log("API Response:", data);
+
+          if (response.ok) {
+            resultDiv.className = "success";
+            resultDiv.textContent =
+              data.message || data.Message || "成功しました";
+          } else {
+            resultDiv.className = "error";
+            resultDiv.textContent =
+              data.message || data.Message || "失敗しました";
+          }
+        } catch (err) {
+          console.error("Fetch Error:", err);
+          resultDiv.className = "error";
+          resultDiv.textContent = "通信エラーが発生しました: " + err.message;
+        }
+      });
+    </script>
+  </body>
+</html>
