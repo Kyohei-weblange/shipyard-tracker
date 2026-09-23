@@ -19,6 +19,12 @@ Public Class BlocksItem
     Public Property UpdatedAt As DateTime
 End Class
 
+Public Class UpdateStatusRequest
+    Public Property Id As Integer
+    Public Property Status As String
+    Public Property UpdateAt As DateTime
+End Class
+
 Module Program
     Sub Main(args As String())
         Dim builder = WebApplication.CreateBuilder(args)
@@ -97,6 +103,34 @@ Module Program
             End Using
           End Using
           Return Results.Json(blocks)
+        End Function)
+
+        app.MapPut("/api/blocks/status", Function(req As UpdateStatusRequest) As IResult
+          Using connection As New SqliteConnection(connectionString)
+            connection.Open()
+            Dim command = connection.CreateCommand()
+            If Not New String(){"未着手", "加工中", "組立中", "塗装中", "完成"}.Contains(req.Status) Then
+              Return Results.BadRequest("不正なステータスです。")
+            End If
+            Dim sql As String = "
+              UPDATE ShipBlocks SET
+                Status = @status,
+                UpdatedAt = @updatedAt
+              WHERE
+                Id = @id
+            "
+            command.Parameters.AddWithValue("@id", req.Id)
+            command.Parameters.AddWithValue("@status", req.Status)
+            command.Parameters.AddWithValue("@updatedAt", DateTime.Now)
+            command.CommandText = sql
+            ' command.ExecuteNonQuery()
+            Dim rowsAffected As Integer = command.ExecuteNonQuery()
+            If rowsAffected > 0 Then
+              Return Results.Ok()
+            Else
+              Return Results.NotFound("指定されたブロックが存在しません。")
+            End If
+          End Using
         End Function)
 
         app.Run()
