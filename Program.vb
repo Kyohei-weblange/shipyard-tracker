@@ -25,6 +25,12 @@ Public Class UpdateStatusRequest
     Public Property UpdateAt As DateTime
 End Class
 
+Public Class BatchUpdateStatusRequest
+    Public Property BlockIds As List(Of Integer)
+    Public Property Status As String
+    Public Property UpdateAt As DateTime
+End Class
+
 Module Program
     Sub Main(args As String())
         Dim builder = WebApplication.CreateBuilder(args)
@@ -130,6 +136,42 @@ Module Program
             Else
               Return Results.NotFound("指定されたブロックが存在しません。")
             End If
+          End Using
+        End Function)
+
+        app.MapPut("/api/blocks/batch-status", Function(req As BatchUpdateStatusRequest) As IResult
+          Using connection As New SqliteConnection(connectionString)
+            If req.BlockIds Is Nothing OrElse req.BlockIds.Count = 0 Then
+              Return Results.BadRequest("更新対象のIDが指定されていません。")
+            End If
+            If Not New String(){"未着手", "加工中", "組立中", "塗装中", "完成"}.Contains(req.Status) Then
+              Return Results.BadRequest("不正なステータスです。")
+            End If
+            connection.Open()
+            Dim transaction = connection.BeginTransaction()
+            Dim updatedCount As Integer = 0
+            Try
+              For Each blockId In req.BlockIds
+                Dim command = connection.CreateCommand()
+                command.Transaction = transaction
+                command.CommandText = "
+                  UPDATE ShipBlocks SET
+                    Status = @status,
+                    UpdatedAt = @updatedAt
+                  WHERE
+                    Id = @id
+                "
+                command.Parameters.AddWithValue("@status", req.Status)
+                command.Parameters.AddWithValue("@updatedAt", DateTime.Now)
+                command.Parameters.AddWithValue("@id", blockId)
+                updatedCount += command.ExecuteNonQuery()
+              Next
+                transaction.Commit()
+                Return Results.Ok($"{updatedCount}件のブロックステータスを一括更新しました。")
+              Catch
+                transaction.Rollback()
+                Throw
+            End Try
           End Using
         End Function)
 
