@@ -22,13 +22,12 @@ End Class
 Public Class UpdateStatusRequest
     Public Property Id As Integer
     Public Property Status As String
-    Public Property UpdateAt As DateTime
+    Public Property CurrentUpdatedAt As String
 End Class
 
 Public Class BatchUpdateStatusRequest
     Public Property BlockIds As List(Of Integer)
     Public Property Status As String
-    Public Property UpdateAt As DateTime
 End Class
 
 Module Program
@@ -118,23 +117,29 @@ Module Program
             If Not New String(){"未着手", "加工中", "組立中", "塗装中", "完成"}.Contains(req.Status) Then
               Return Results.BadRequest("不正なステータスです。")
             End If
+            If req.CurrentUpdatedAt Is Nothing orElse req.CurrentUpdatedAt = "" Then
+              Return Results.BadRequest("現在の更新日時が指定されていません。")
+            End If
             Dim sql As String = "
               UPDATE ShipBlocks SET
                 Status = @status,
                 UpdatedAt = @updatedAt
               WHERE
                 Id = @id
+              AND
+                UpdatedAt = @currentUpdatedAt
             "
             command.Parameters.AddWithValue("@id", req.Id)
             command.Parameters.AddWithValue("@status", req.Status)
-            command.Parameters.AddWithValue("@updatedAt", DateTime.Now)
+            command.Parameters.AddWithValue("@updatedAt", DateTime.Now.ToString("o"))
+            command.Parameters.AddWithValue("@currentUpdatedAt", req.CurrentUpdatedAt)
             command.CommandText = sql
             ' command.ExecuteNonQuery()
             Dim rowsAffected As Integer = command.ExecuteNonQuery()
             If rowsAffected > 0 Then
-              Return Results.Ok()
+              Return Results.Ok("ステータスを更新しました。")
             Else
-              Return Results.NotFound("指定されたブロックが存在しません。")
+              Return Results.conflict("他のユーザーによってデータが更新されたか、対象のブロックが存在しません。最新データを再取得してください。")
             End If
           End Using
         End Function)
