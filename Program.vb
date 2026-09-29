@@ -180,6 +180,54 @@ Module Program
           End Using
         End Function)
 
+        ' ブロック進捗集計・ボトルネック分析
+        app.MapGet ("/api/blocks/summary", Function() As IResult
+          Using connection As New SqliteConnection(connectionString)
+            Dim totalBlocks As Integer = 0
+            Dim totalWeightTons As Double = 0.0
+            Dim statusSummary As New Dictionary(Of String, Integer) From {
+              {"未着手", 0},
+              {"加工中", 0},
+              {"組立中", 0},
+              {"塗装中", 0},
+              {"完成", 0}
+            }
+            Dim bottleneckProcess As String = "滞留なし"
+
+            connection.Open()
+            ' 総ブロック数と総重量を取得
+            Dim command = connection.CreateCommand()
+            command.CommandText = "SELECT COUNT(*), SUM(WeightTons) FROM ShipBlocks"
+            Using reader = command.ExecuteReader()
+              If reader.Read() Then
+                totalBlocks = reader.GetInt32(0)
+                totalWeightTons = If(reader.IsDBNull(1), 0.0, reader.GetDouble(1))
+              End If
+            End Using
+
+            ' ステータスごとのブロック数を取得
+            command.CommandText = "SELECT Status, COUNT(*) FROM ShipBlocks GROUP BY Status"
+            Using reader = command.ExecuteReader()
+              While reader.Read()
+                Dim status As String = reader.GetString(0)
+                Dim count As Integer = reader.GetInt32(1)
+                If statusSummary.ContainsKey(status) Then
+                  statusSummary(status) = count
+                End If
+              End While
+            End Using
+
+            ' ボトルネックとなる工程を特定（最も多いステータスの工程をボトルネックとする）
+            command.CommandText = "SELECT ProcessName, COUNT(*) FROM ShipBlocks WHERE Status <> '完成' GROUP BY ProcessName ORDER BY COUNT(*) DESC LIMIT 1"
+            Using reader = command.ExecuteReader()
+              If reader.Read() Then
+                bottleneckProcess = reader.GetString(0)
+              End If
+            End Using
+            Return Results.Ok(New With { Key .totalBlocks = totalBlocks, Key .totalWeightTons = totalWeightTons, Key .statusSummary = statusSummary, Key .bottleneckProcess = bottleneckProcess})
+          End Using
+        End Function)
+
         app.Run()
     End Sub
 End Module
