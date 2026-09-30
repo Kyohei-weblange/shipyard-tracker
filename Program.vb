@@ -57,7 +57,14 @@ Module Program
                 Status TEXT NOT NULL,
                 WeightTons REAL DEFAULT 0.0,
                 UpdatedAt TEXT DEFAULT (datetime('now', 'localtime'))
-              )
+              );
+              CREATE TABLE IF NOT EXISTS AuditLogs (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                BlockId INTEGER NOT NULL,
+                ActionType TEXT NOT NULL,
+                Details TEXT,
+                CreatedAt TEXT DEFAULT (datetime('now', 'localtime'))
+              );
             "
             command.ExecuteNonQuery()
           End Using
@@ -134,9 +141,9 @@ Module Program
             command.Parameters.AddWithValue("@updatedAt", DateTime.Now.ToString("o"))
             command.Parameters.AddWithValue("@currentUpdatedAt", req.CurrentUpdatedAt)
             command.CommandText = sql
-            ' command.ExecuteNonQuery()
             Dim rowsAffected As Integer = command.ExecuteNonQuery()
             If rowsAffected > 0 Then
+              Task.Run(Sub() WriteAuditLog(connectionString, req.Id, "ステータス更新", $"新しいステータス: {req.Status}"))
               Return Results.Ok("ステータスを更新しました。")
             Else
               Return Results.conflict("他のユーザーによってデータが更新されたか、対象のブロックが存在しません。最新データを再取得してください。")
@@ -230,4 +237,20 @@ Module Program
 
         app.Run()
     End Sub
+
+    ' ログ書き込み用のSub関数(非同期)
+    Private Sub WriteAuditLog(connectionString As String, blockId As Integer, actionType As String, details As String)
+        Using conn As New SqliteConnection(connectionString)
+            conn.Open()
+            Dim command = conn.CreateCommand()
+            command.CommandText = "
+              INSERT INTO AuditLogs (BlockId, ActionType, Details) VALUES (@blockId, @actionType, @details)
+            "
+            command.Parameters.AddWithValue("@blockId", blockId)
+            command.Parameters.AddWithValue("@actionType", actionType)
+            command.Parameters.AddWithValue("@details", details)
+            command.ExecuteNonQuery()
+        End Using
+    End Sub
+
 End Module
