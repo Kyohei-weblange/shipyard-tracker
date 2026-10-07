@@ -3,73 +3,94 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>船体ブロック進捗管理システム</title>
+    <title>造船所 船体ブロック進捗管理システム</title>
     <style>
       body {
         font-family: sans-serif;
         margin: 20px;
+        background-color: #f4f7f6;
       }
-      .btn {
-        padding: 10px 15px;
-        background-color: #007bff;
+      h1 {
+        color: #1a365d;
+      }
+      .container {
+        max-width: 900px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+      }
+      th,
+      td {
+        border: 1px solid #e2e8f0;
+        padding: 10px;
+        text-align: left;
+      }
+      th {
+        background-color: #2b6cb0;
+        color: white;
+      }
+      .alert {
+        padding: 10px;
+        border-radius: 4px;
+        margin-bottom: 15px;
+        display: none;
+      }
+      .alert-danger {
+        background-color: #fed7d7;
+        color: #9b2c2c;
+        border: 1px solid #feb2b2;
+      }
+      .alert-success {
+        background-color: #c6f6d5;
+        color: #22543d;
+        border: 1px solid #9ae6b4;
+      }
+      button {
+        background-color: #3182ce;
         color: white;
         border: none;
+        padding: 6px 12px;
         border-radius: 4px;
         cursor: pointer;
       }
-      .btn:hover {
-        background-color: #0056b3;
+      button:hover {
+        background-color: #2b6cb0;
       }
-      #result {
-        margin-top: 15px;
-        padding: 10px;
-        border-radius: 4px;
-        font-weight: bold;
-      }
-      .success {
-        background-color: #d4edda;
-        color: #155724;
-      }
-      .error {
-        background-color: #f8d7da;
-        color: #721c24;
+      select {
+        padding: 5px;
       }
     </style>
   </head>
   <body>
-    <h1>船体ブロック進捗管理システム</h1>
-    <button id="initBtn" class="btn">DB初期化を実行</button>
-    <div id="result"></div>
+    <div class="container">
+      <h1>造船所 船体ブロック進捗管理システム</h1>
 
-    <script>
-      document.getElementById("initBtn").addEventListener("click", async () => {
-        const resultDiv = document.getElementById("result");
-        resultDiv.className = "";
-        resultDiv.textContent = "処理中...";
+      <div id="message" class="alert"></div>
 
-        try {
-          const response = await fetch("/api/init-db", {
-            method: "POST",
-          });
+      <button id="reloadBtn">最新情報に更新</button>
 
-          const data = await response.json();
-          console.log("API Response:", data);
-
-          if (response.ok) {
-            resultDiv.className = "success";
-            resultDiv.textContent =
-              data.message || data.Message || "成功しました";
-          } else {
-            resultDiv.className = "error";
-            resultDiv.textContent =
-              data.message || data.Message || "失敗しました";
-          }
-        } catch (err) {
-          console.error("Fetch Error:", err);
-          resultDiv.className = "error";
-          resultDiv.textContent = "通信エラーが発生しました: " + err.message;
-        }
-      });
-    </script>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>ブロック名</th>
+            <th>工程（ステータス）</th>
+            <th>最終更新日時</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="blockTableBody">
+          <!-- JSで動的に描画 -->
+        </tbody>
+      </table>
+    </div>
+    <script src="app.js"></script>
   </body>
 </html>
