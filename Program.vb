@@ -120,34 +120,55 @@ Module Program
         app.MapPut("/api/blocks/status", Function(req As UpdateStatusRequest) As IResult
           Using connection As New SqliteConnection(connectionString)
             connection.Open()
-            Dim command = connection.CreateCommand()
+            ' Dim command = connection.CreateCommand()
             If Not New String(){"未着手", "加工中", "組立中", "塗装中", "完成"}.Contains(req.Status) Then
               Return Results.BadRequest("不正なステータスです。")
             End If
             If req.CurrentUpdatedAt Is Nothing orElse req.CurrentUpdatedAt = "" Then
               Return Results.BadRequest("現在の更新日時が指定されていません。")
             End If
-            Dim sql As String = "
-              UPDATE ShipBlocks SET
-                Status = @status,
-                UpdatedAt = @updatedAt
-              WHERE
-                Id = @id
-              AND
-                UpdatedAt = @currentUpdatedAt
-            "
-            command.Parameters.AddWithValue("@id", req.Id)
-            command.Parameters.AddWithValue("@status", req.Status)
-            command.Parameters.AddWithValue("@updatedAt", DateTime.Now.ToString("o"))
-            command.Parameters.AddWithValue("@currentUpdatedAt", req.CurrentUpdatedAt)
-            command.CommandText = sql
-            Dim rowsAffected As Integer = command.ExecuteNonQuery()
-            If rowsAffected > 0 Then
-              Task.Run(Sub() WriteAuditLog(connectionString, req.Id, "ステータス更新", $"新しいステータス: {req.Status}"))
-              Return Results.Ok("ステータスを更新しました。")
-            Else
-              Return Results.conflict("他のユーザーによってデータが更新されたか、対象のブロックが存在しません。最新データを再取得してください。")
+            Dim currentDbUpdatedAtStr As String = Nothing
+
+            Using selectCmd = connection.CreateCommand()
+              selectCmd.CommandText = "
+                SELECT
+                  UpdatedAt
+                FROM
+                  ShipBlocks
+                WHERE
+                  Id = @id
+              "
+              selectCmd.parameters.AddWithValue("@id", req.Id)
+              Dim result = selectCmd.ExecuteScalar()
+              If result Is Nothing Then
+                Return Results.NotFound("対象のデータが存在しません。")
+              End If
+              currentDbUpdatedAtStr = result.ToString()
+            End Using
+            Dim str As DateTime = DateTime.Parse(currentDbUpdatedAtStr)
+            Dim at As DateTime = DateTime.Parse(req.CurrentUpdatedAt)
+            If str <> at Then
+              Return Results.Conflict("他のユーザーによってデータが更新されました。")
             End If
+
+            Using updateCmd = connection.CreateCommand()
+              updateCmd.CommandText = "
+                UPDATE ShipBlocks SET
+                  Status = @status,
+                  UpdatedAt = @updatedAt
+                WHERE
+                  Id = @id
+              "
+              updateCmd.Parameters.AddWithValue("@id", req.Id)
+              updateCmd.Parameters.AddWithValue("@status", req.Status)
+              updateCmd.Parameters.AddWithValue("@updatedAt", DateTime.Now.ToString("o"))
+              Dim rows = updateCmd.ExecuteNonQuery()
+              If rows = 0 Then
+                Return Results.Problem("更新に失敗しました。")
+              End If
+            End Using
+            Task.Run(Sub() WriteAuditLog(connectionString, req.Id, "ステータス更新", $"新しいステータス: {req.Status}"))
+            Return Results.Ok("更新が完了しました。")
           End Using
         End Function)
 

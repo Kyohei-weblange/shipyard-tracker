@@ -54,4 +54,5 @@
 /Users/kyo-hei/Desktop/shipyard-tracker/obj/Debug/net10.0/ShipyardTracker.pdb
 /Users/kyo-hei/Desktop/shipyard-tracker/obj/Debug/net10.0/ShipyardTracker.genruntimeconfig.cache
 /Users/kyo-hei/Desktop/shipyard-tracker/obj/Debug/net10.0/ref/ShipyardTracker.dll
-/Users/kyo-hei/Desktop/shipyard-tracker/obj/Debug/net10.0/compressed/ravraojjmf-{0}-lftv3h3j63-lftv3h3j63.gz
+/Users/kyo-hei/Desktop/shipyard-tracker/obj/Debug/net10.0/compressed/ravraojjmf-{0}-1ewarm2hcu-1ewarm2hcu.gz
+/Users/kyo-hei/Desktop/shipyard-tracker/obj/Debug/net10.0/compressed/emdhzkelb5-{0}-mgkbvhtk7x-mgkbvhtk7x.gz
