@@ -31,6 +31,9 @@ Public Class BatchUpdateStatusRequest
 End Class
 
 Module Program
+
+  Private ReadOnly connectionString As String = "Data Source = shipyard.db"
+  
     Sub Main(args As String())
         Dim builder = WebApplication.CreateBuilder(args)
         Dim app = builder.Build()
@@ -38,15 +41,13 @@ Module Program
         app.UseDefaultFiles()
         app.UseStaticFiles()
 
-        Dim connectionString As String = "Data Source = shipyard.db"
 
         ' エンドポイント
         app.MapPost("/api/init-db", Function() As IResult
           Try
           ' DB初期化
-          Using connection As New SqliteConnection(connectionString)
+          Using connection As SqliteConnection = GetConnection()
 
-            connection.Open()
             Dim command = connection.CreateCommand()
             command.CommandText = "
               CREATE TABLE IF NOT EXISTS ShipBlocks (
@@ -65,6 +66,7 @@ Module Program
                 Details TEXT,
                 CreatedAt TEXT DEFAULT (datetime('now', 'localtime'))
               );
+              CREATE INDEX IF NOT EXISTS idex_blocks_status ON ShipBlocks(status);
             "
             command.ExecuteNonQuery()
           End Using
@@ -78,8 +80,7 @@ Module Program
 
         app.MapGet("/api/blocks", Function(shipId As String) As IResult
           Dim blocks As New List(Of BlocksItem)()
-          Using connection As New SqliteConnection(connectionString)
-            connection.Open()
+          Using connection As SqliteConnection = GetConnection()
             Dim command = connection.CreateCommand()
             Dim sql As String = "
               SELECT
@@ -118,8 +119,7 @@ Module Program
         End Function)
 
         app.MapPut("/api/blocks/status", Function(req As UpdateStatusRequest) As IResult
-          Using connection As New SqliteConnection(connectionString)
-            connection.Open()
+          Using connection As SqliteConnection = GetConnection()
             ' Dim command = connection.CreateCommand()
             If Not New String(){"未着手", "加工中", "組立中", "塗装中", "完成"}.Contains(req.Status) Then
               Return Results.BadRequest("不正なステータスです。")
@@ -173,14 +173,13 @@ Module Program
         End Function)
 
         app.MapPut("/api/blocks/batch-status", Function(req As BatchUpdateStatusRequest) As IResult
-          Using connection As New SqliteConnection(connectionString)
+          Using connection As SqliteConnection = GetConnection()
             If req.BlockIds Is Nothing OrElse req.BlockIds.Count = 0 Then
               Return Results.BadRequest("更新対象のIDが指定されていません。")
             End If
             If Not New String(){"未着手", "加工中", "組立中", "塗装中", "完成"}.Contains(req.Status) Then
               Return Results.BadRequest("不正なステータスです。")
             End If
-            connection.Open()
             Dim transaction = connection.BeginTransaction()
             Dim updatedCount As Integer = 0
             Try
@@ -210,7 +209,7 @@ Module Program
 
         ' ブロック進捗集計・ボトルネック分析
         app.MapGet ("/api/blocks/summary", Function() As IResult
-          Using connection As New SqliteConnection(connectionString)
+          Using connection As SqliteConnection = GetConnection()
             Dim totalBlocks As Integer = 0
             Dim totalWeightTons As Double = 0.0
             Dim statusSummary As New Dictionary(Of String, Integer) From {
@@ -222,7 +221,6 @@ Module Program
             }
             Dim bottleneckProcess As String = "滞留なし"
 
-            connection.Open()
             ' 総ブロック数と総重量を取得
             Dim command = connection.CreateCommand()
             command.CommandText = "SELECT COUNT(*), SUM(WeightTons) FROM ShipBlocks"
@@ -258,6 +256,12 @@ Module Program
 
         app.Run()
     End Sub
+
+    Function GetConnection() As SqliteConnection
+      Dim conn As New SqliteConnection(connectionString)
+      conn.Open()
+      Return conn
+    End Function
 
     ' ログ書き込み用のSub関数(非同期)
     Private Sub WriteAuditLog(connectionString As String, blockId As Integer, actionType As String, details As String)
