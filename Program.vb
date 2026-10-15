@@ -19,6 +19,16 @@ Public Class BlocksItem
     Public Property UpdatedAt As DateTime
 End Class
 
+Public Class CreateBlockRequest
+    Public Property BlockId As Integer
+    Public Property BlockCode As String
+    Public Property ShipId As String
+    Public Property ProcessName As String
+    Public Property Status As String
+    Public Property WeightTons As Integer
+    Public Property UpdatedAt As DateTime
+End Class
+
 Public Class UpdateStatusRequest
     Public Property Id As Integer
     Public Property Status As String
@@ -33,7 +43,7 @@ End Class
 Module Program
 
   Private ReadOnly connectionString As String = "Data Source = shipyard.db"
-  
+
     Sub Main(args As String())
         Dim builder = WebApplication.CreateBuilder(args)
         Dim app = builder.Build()
@@ -118,9 +128,42 @@ Module Program
           Return Results.Json(blocks)
         End Function)
 
+        app.MapPost("/api/blocks/", Function(req As CreateBlockRequest) As IResult
+          Using connection As SqliteConnection = GetConnection()
+            Using insertCmd = connection.CreateCommand()
+              insertCmd.CommandText = "
+                INSERT INTO ShipBlocks (BlockCode, ShipId, ProcessName, Status, WeightTons, UpdatedAt) VALUES (@blockCode, @shipId, @processName, @status, @weightTons, @updatedAt)
+              "
+              insertCmd.Parameters.AddWithValue("@blockCode", req.BlockCode)
+              insertCmd.Parameters.AddWithValue("@shipId", req.ShipId)
+              insertCmd.Parameters.AddWithValue("@processName", req.ProcessName)
+              insertCmd.Parameters.AddWithValue("@status", req.Status)
+              insertCmd.Parameters.AddWithValue("@weightTons", req.WeightTons)
+              insertCmd.Parameters.AddWithValue("@updatedAt", req.UpdatedAt)
+              insertCmd.ExecuteNonQuery()
+              Task.Run(Sub() WriteAuditLog(connectionString, 0, "ブロック追加", $"新規ブロック登録: {req.BlockCode}"))
+              Return Results.Ok("登録が完了しました。")
+            End Using
+          End Using
+        End Function)
+
+        app.MapDelete("/api/blocks/{id}", Function(id As Integer) As IResult
+          Using connection As SqliteConnection = GetConnection()
+            Dim command = connection.CreateCommand()
+            command.CommandText = "DELETE FROM ShipBlocks WHERE Id = @id"
+            command.Parameters.AddWithValue("@id", id)
+            Dim rowAffected As Integer = Command.ExecuteNonQuery()
+            If rowAffected > 0 Then
+              Task.Run(Sub() WriteAuditLog(connectionString, 0, "ブロック削除", $"削除ブロック：{id}"))
+              Return Results.Ok("削除されました。")
+            Else
+              Return Results.NotFound($"ID: {id}は見つかりませんでした。")
+            End If
+          End Using
+        End Function)
+
         app.MapPut("/api/blocks/status", Function(req As UpdateStatusRequest) As IResult
           Using connection As SqliteConnection = GetConnection()
-            ' Dim command = connection.CreateCommand()
             If Not New String(){"未着手", "加工中", "組立中", "塗装中", "完成"}.Contains(req.Status) Then
               Return Results.BadRequest("不正なステータスです。")
             End If
