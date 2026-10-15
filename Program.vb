@@ -147,6 +147,21 @@ Module Program
           End Using
         End Function)
 
+        app.MapDelete("/api/blocks/{id}", Function(id As Integer) As IResult
+          Using connection As SqliteConnection = GetConnection()
+            Dim command = connection.CreateCommand()
+            command.CommandText = "DELETE FROM ShipBlocks WHERE Id = @id"
+            command.Parameters.AddWithValue("@id", id)
+            Dim rowAffected As Integer = Command.ExecuteNonQuery()
+            If rowAffected > 0 Then
+              Task.Run(Sub() WriteAuditLog(connectionString, 0, "ブロック削除", $"削除ブロック：{id}"))
+              Return Results.Ok("削除されました。")
+            Else
+              Return Results.NotFound($"ID: {id}は見つかりませんでした。")
+            End If
+          End Using
+        End Function)
+
         app.MapPut("/api/blocks/status", Function(req As UpdateStatusRequest) As IResult
           Using connection As SqliteConnection = GetConnection()
             If Not New String(){"未着手", "加工中", "組立中", "塗装中", "完成"}.Contains(req.Status) Then
