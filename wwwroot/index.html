@@ -21,6 +21,21 @@
         border-radius: 8px;
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
       }
+      .form-section {
+        margin: 20px 0;
+        padding: 15px;
+        background: #edf2f7;
+        border-radius: 6px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+      .form-section input {
+        padding: 8px;
+        width: 250px;
+        border: 1px solid #cbd5e0;
+        border-radius: 4px;
+      }
       table {
         width: 100%;
         border-collapse: collapse;
@@ -63,6 +78,12 @@
       button:hover {
         background-color: #2b6cb0;
       }
+      .btn-danger {
+        background-color: #e53e3e;
+      }
+      .btn-danger:hover {
+        background-color: #c53030;
+      }
       select {
         padding: 5px;
       }
@@ -74,7 +95,16 @@
 
       <div id="message" class="alert"></div>
 
-      <button id="reloadBtn">最新情報に更新</button>
+      <!-- 新規ブロック追加フォーム -->
+      <div class="form-section">
+        <input
+          type="text"
+          id="newBlockCode"
+          placeholder="ブロックコード (例: B-01)"
+        />
+        <button id="addBlockBtn">新規ブロック追加</button>
+        <button id="reloadBtn">最新情報に更新</button>
+      </div>
 
       <table>
         <thead>

@@ -1,8 +1,14 @@
 document.addEventListener("DOMContentLoaded", () => {
   loadBlocks();
+
   const reloadBtn = document.getElementById("reloadBtn");
   if (reloadBtn) {
     reloadBtn.addEventListener("click", loadBlocks);
+  }
+
+  const addBlockBtn = document.getElementById("addBlockBtn");
+  if (addBlockBtn) {
+    addBlockBtn.addEventListener("click", addBlock);
   }
 });
 
@@ -45,9 +51,7 @@ async function loadBlocks() {
 
     blocks.forEach((block) => {
       const id = block.id;
-      const displayName = block.processName
-        ? `${block.blockCode}`
-        : block.blockCode;
+      const displayName = block.blockCode ?? "";
       const status = block.status ?? "未着手";
       const rawUpdatedAt = block.updatedAt ?? "";
       const formattedUpdatedAt = formatDate(rawUpdatedAt);
@@ -68,6 +72,7 @@ async function loadBlocks() {
         <td>${formattedUpdatedAt}</td>
         <td>
             <button onclick="updateStatus(${id}, '${rawUpdatedAt}')">更新</button>
+            <button class="btn-danger" onclick="deleteBlock(${id})">削除</button>
         </td>
       `;
       tbody.appendChild(tr);
@@ -77,7 +82,59 @@ async function loadBlocks() {
   }
 }
 
-// HTMLのボタンから呼ばれる関数
+// 新規ブロック追加処理 (POST /api/blocks)
+async function addBlock() {
+  const inputEl = document.getElementById("newBlockCode");
+  if (!inputEl) return;
+  const blockCode = inputEl.value.trim();
+
+  if (!blockCode) {
+    showMessage("ブロックコードを入力してください。", true);
+    return;
+  }
+
+  try {
+    const response = await fetch("/api/blocks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ blockCode: blockCode }),
+    });
+
+    if (response.ok) {
+      showMessage("新しいブロックを追加しました！");
+      inputEl.value = "";
+      await loadBlocks();
+    } else {
+      const errorText = await response.text();
+      showMessage(`追加失敗: ${errorText}`, true);
+    }
+  } catch (err) {
+    showMessage(`通信エラー: ${err.message}`, true);
+  }
+}
+
+// ブロック削除処理 (DELETE /api/blocks/{id})
+async function deleteBlock(id) {
+  if (!confirm(`ID: ${id} のブロックを削除しますか？`)) return;
+
+  try {
+    const response = await fetch(`/api/blocks/${id}`, {
+      method: "DELETE",
+    });
+
+    if (response.ok) {
+      showMessage("ブロックを削除しました！");
+      await loadBlocks();
+    } else {
+      const errorText = await response.text();
+      showMessage(`削除失敗: ${errorText}`, true);
+    }
+  } catch (err) {
+    showMessage(`通信エラー: ${err.message}`, true);
+  }
+}
+
+// HTMLのステータス更新ボタンから呼ばれる関数
 async function updateStatus(id, currentUpdatedAt) {
   const selectEl = document.getElementById(`status-${id}`);
   if (!selectEl) return;
@@ -86,7 +143,7 @@ async function updateStatus(id, currentUpdatedAt) {
   await updateBlockStatus(id, newStatus, currentUpdatedAt);
 }
 
-// ステータス更新 API 呼び出し処理
+// ステータス更新 API 呼び出し処理 (PUT /api/blocks/status)
 async function updateBlockStatus(id, newStatus, currentUpdatedAt) {
   try {
     const response = await fetch("/api/blocks/status", {
@@ -101,11 +158,11 @@ async function updateBlockStatus(id, newStatus, currentUpdatedAt) {
 
     if (response.ok) {
       showMessage("ステータスを更新しました！");
-      await loadBlocks(); // 最新一覧を再取得・再描画
+      await loadBlocks();
     } else if (response.status === 409) {
       const errorText = await response.text();
       alert(`【衝突エラー】${errorText}`);
-      await loadBlocks(); // 衝突時も最新データに再同期
+      await loadBlocks();
     } else {
       const errorText = await response.text();
       showMessage(`更新失敗: ${errorText}`, true);

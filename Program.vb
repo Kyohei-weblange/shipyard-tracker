@@ -20,13 +20,13 @@ Public Class BlocksItem
 End Class
 
 Public Class CreateBlockRequest
-    Public Property BlockId As Integer
+    ' Public Property BlockId As Integer
     Public Property BlockCode As String
-    Public Property ShipId As String
-    Public Property ProcessName As String
-    Public Property Status As String
-    Public Property WeightTons As Integer
-    Public Property UpdatedAt As DateTime
+    ' Public Property ShipId As String
+    ' Public Property ProcessName As String
+    ' Public Property Status As String
+    ' Public Property WeightTons As Integer
+    ' Public Property UpdatedAt As DateTime
 End Class
 
 Public Class UpdateStatusRequest
@@ -132,14 +132,15 @@ Module Program
           Using connection As SqliteConnection = GetConnection()
             Using insertCmd = connection.CreateCommand()
               insertCmd.CommandText = "
-                INSERT INTO ShipBlocks (BlockCode, ShipId, ProcessName, Status, WeightTons, UpdatedAt) VALUES (@blockCode, @shipId, @processName, @status, @weightTons, @updatedAt)
+                INSERT INTO ShipBlocks (BlockCode, ShipId, ProcessName, Status, WeightTons, UpdatedAt)
+                VALUES (@blockCode, @shipId, @processName, @status, @weightTons, @updatedAt)
               "
               insertCmd.Parameters.AddWithValue("@blockCode", req.BlockCode)
-              insertCmd.Parameters.AddWithValue("@shipId", req.ShipId)
-              insertCmd.Parameters.AddWithValue("@processName", req.ProcessName)
-              insertCmd.Parameters.AddWithValue("@status", req.Status)
-              insertCmd.Parameters.AddWithValue("@weightTons", req.WeightTons)
-              insertCmd.Parameters.AddWithValue("@updatedAt", req.UpdatedAt)
+              insertCmd.Parameters.AddWithValue("@shipId", "S-001")
+              insertCmd.Parameters.AddWithValue("@processName", "未着手")
+              insertCmd.Parameters.AddWithValue("@status", "未着手")
+              insertCmd.Parameters.AddWithValue("@weightTons", 5)
+              insertCmd.Parameters.AddWithValue("@updatedAt", DateTime.Now.ToString("o"))
               insertCmd.ExecuteNonQuery()
               Task.Run(Sub() WriteAuditLog(connectionString, 0, "ブロック追加", $"新規ブロック登録: {req.BlockCode}"))
               Return Results.Ok("登録が完了しました。")
