@@ -27,8 +27,14 @@
         background: #edf2f7;
         border-radius: 6px;
         display: flex;
-        gap: 10px;
+        gap: 15px;
         align-items: center;
+        flex-wrap: wrap;
+      }
+      .filter-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
       }
       table {
         width: 100%;
@@ -91,8 +97,31 @@
         background-color: #4a5568;
       }
       select {
-        padding: 5px;
+        padding: 6px;
+        border-radius: 4px;
+        border: 1px solid #cbd5e0;
       }
+      /* ステータスバッジのスタイル */
+      .badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.85em;
+        font-weight: bold;
+      }
+      .badge-not-started {
+        background-color: #e2e8f0;
+        color: #4a5568;
+      }
+      .badge-in-progress {
+        background-color: #feebc8;
+        color: #c05621;
+      }
+      .badge-completed {
+        background-color: #c6f6d5;
+        color: #22543d;
+      }
+
       /* モーダル用スタイル */
       .modal {
         display: none;
@@ -128,12 +157,20 @@
 
       <div id="message" class="alert"></div>
 
-      <!-- 新規ブロック登録トリガー＆更新ボタン -->
+      <!-- 操作バー（フィルター＆登録ボタン） -->
       <div class="form-section">
-        <button id="openModalBtn" class="btn-success">
-          ＋ 新規ブロック詳細登録
-        </button>
-        <button id="reloadBtn">最新情報に更新</button>
+        <div class="filter-group">
+          <label for="shipFilter"><strong>船舶絞り込み:</strong></label>
+          <select id="shipFilter">
+            <option value="ALL">すべて表示</option>
+          </select>
+        </div>
+        <div style="margin-left: auto; display: flex; gap: 10px">
+          <button id="openModalBtn" class="btn-success">
+            ＋ 新規ブロック詳細登録
+          </button>
+          <button id="reloadBtn">最新情報に更新</button>
+        </div>
       </div>
 
       <table>
