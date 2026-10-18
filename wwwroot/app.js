@@ -1,14 +1,10 @@
 document.addEventListener("DOMContentLoaded", () => {
   loadBlocks();
+  initModal();
 
   const reloadBtn = document.getElementById("reloadBtn");
   if (reloadBtn) {
     reloadBtn.addEventListener("click", loadBlocks);
-  }
-
-  const addBlockBtn = document.getElementById("addBlockBtn");
-  if (addBlockBtn) {
-    addBlockBtn.addEventListener("click", addBlock);
   }
 });
 
@@ -39,6 +35,72 @@ function formatDate(isoString) {
   });
 }
 
+// モーダルの開閉制御初期化
+function initModal() {
+  const modal = document.getElementById("blockModal");
+  const openBtn = document.getElementById("openModalBtn");
+  const closeBtn = document.getElementById("closeModalBtn");
+  const form = document.getElementById("blockForm");
+
+  if (openBtn) {
+    openBtn.addEventListener("click", () => {
+      modal.style.display = "block";
+    });
+  }
+
+  if (closeBtn) {
+    closeBtn.addEventListener("click", () => {
+      modal.style.display = "none";
+    });
+  }
+
+  // モーダル外クリックで閉じる
+  window.addEventListener("click", (e) => {
+    if (e.target === modal) {
+      modal.style.display = "none";
+    }
+  });
+
+  // フォーム送信処理（詳細データのPOST）
+  if (form) {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const blockData = {
+        blockCode: document.getElementById("inputBlockCode").value.trim(),
+        shipId: document.getElementById("inputShipId").value.trim(),
+        processName: document.getElementById("inputProcessName").value.trim(),
+        weightTons:
+          parseInt(document.getElementById("inputWeightTons").value, 10) || 0,
+      };
+
+      try {
+        const response = await fetch("/api/blocks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(blockData),
+        });
+
+        if (response.ok) {
+          showMessage("新しいブロックを詳細登録しました！");
+          modal.style.display = "none";
+          form.reset();
+          // デフォルト値を再設定
+          document.getElementById("inputShipId").value = "S-001";
+          document.getElementById("inputProcessName").value = "切断";
+          document.getElementById("inputWeightTons").value = "5";
+          await loadBlocks();
+        } else {
+          const errorText = await response.text();
+          showMessage(`追加失敗: ${errorText}`, true);
+        }
+      } catch (err) {
+        showMessage(`通信エラー: ${err.message}`, true);
+      }
+    });
+  }
+}
+
 // ブロック一覧取得 API 呼び出し
 async function loadBlocks() {
   try {
@@ -51,7 +113,10 @@ async function loadBlocks() {
 
     blocks.forEach((block) => {
       const id = block.id;
-      const displayName = block.blockCode ?? "";
+      const blockCode = block.blockCode ?? "";
+      const shipId = block.shipId ?? "-";
+      const processName = block.processName ?? "-";
+      const weightTons = block.weightTons ?? 0;
       const status = block.status ?? "未着手";
       const rawUpdatedAt = block.updatedAt ?? "";
       const formattedUpdatedAt = formatDate(rawUpdatedAt);
@@ -59,7 +124,10 @@ async function loadBlocks() {
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td>${id}</td>
-        <td>${displayName}</td>
+        <td>${blockCode}</td>
+        <td>${shipId}</td>
+        <td>${processName}</td>
+        <td>${weightTons} t</td>
         <td>
             <select id="status-${id}">
                 <option value="未着手" ${status === "未着手" ? "selected" : ""}>未着手</option>
@@ -79,37 +147,6 @@ async function loadBlocks() {
     });
   } catch (err) {
     showMessage(err.message, true);
-  }
-}
-
-// 新規ブロック追加処理 (POST /api/blocks)
-async function addBlock() {
-  const inputEl = document.getElementById("newBlockCode");
-  if (!inputEl) return;
-  const blockCode = inputEl.value.trim();
-
-  if (!blockCode) {
-    showMessage("ブロックコードを入力してください。", true);
-    return;
-  }
-
-  try {
-    const response = await fetch("/api/blocks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ blockCode: blockCode }),
-    });
-
-    if (response.ok) {
-      showMessage("新しいブロックを追加しました！");
-      inputEl.value = "";
-      await loadBlocks();
-    } else {
-      const errorText = await response.text();
-      showMessage(`追加失敗: ${errorText}`, true);
-    }
-  } catch (err) {
-    showMessage(`通信エラー: ${err.message}`, true);
   }
 }
 
