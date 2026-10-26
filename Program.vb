@@ -4,45 +4,7 @@ Imports Microsoft.Extensions.Hosting
 Imports Microsoft.Data.Sqlite
 Imports Microsoft.AspNetCore.Http
 
-' レスポンス用のデータ構造をクラスとして定義する
-Public Class ApiResponse
-    Public Property Message As String
-End Class
-
-Public Class BlocksItem
-    Public Property Id As Integer
-    Public Property BlockCode As String
-    Public Property ShipId As String
-    Public Property ProcessName As String
-    Public Property Status As String
-    Public Property WeightTons As Integer
-    Public Property UpdatedAt As DateTime
-End Class
-
-Public Class CreateBlockRequest
-    Public Property BlockId As Integer
-    Public Property BlockCode As String
-    Public Property ShipId As String
-    Public Property ProcessName As String
-    Public Property Status As String
-    Public Property WeightTons As Integer
-    Public Property UpdatedAt As DateTime
-End Class
-
-Public Class UpdateStatusRequest
-    Public Property Id As Integer
-    Public Property Status As String
-    Public Property CurrentUpdatedAt As String
-End Class
-
-Public Class BatchUpdateStatusRequest
-    Public Property BlockIds As List(Of Integer)
-    Public Property Status As String
-End Class
-
 Module Program
-
-  Private ReadOnly connectionString As String = "Data Source = shipyard.db"
 
     Sub Main(args As String())
         Dim builder = WebApplication.CreateBuilder(args)
@@ -51,35 +13,10 @@ Module Program
         app.UseDefaultFiles()
         app.UseStaticFiles()
 
-
         ' エンドポイント
         app.MapPost("/api/init-db", Function() As IResult
           Try
-          ' DB初期化
-          Using connection As SqliteConnection = GetConnection()
-
-            Dim command = connection.CreateCommand()
-            command.CommandText = "
-              CREATE TABLE IF NOT EXISTS ShipBlocks (
-                Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                BlockCode TEXT NOT NULL UNIQUE,
-                ShipId TEXT NOT NULL,
-                ProcessName TEXT NOT NULL,
-                Status TEXT NOT NULL,
-                WeightTons REAL DEFAULT 0.0,
-                UpdatedAt TEXT DEFAULT (datetime('now', 'localtime'))
-              );
-              CREATE TABLE IF NOT EXISTS AuditLogs (
-                Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                BlockId INTEGER NOT NULL,
-                ActionType TEXT NOT NULL,
-                Details TEXT,
-                CreatedAt TEXT DEFAULT (datetime('now', 'localtime'))
-              );
-              CREATE INDEX IF NOT EXISTS idex_blocks_status ON ShipBlocks(status);
-            "
-            command.ExecuteNonQuery()
-          End Using
+            Database.InitializeDatabase()
             Dim response As New ApiResponse With {.Message = "初期化成功！"}
               Return Results.Json(response)
             Catch ex As Exception
@@ -142,7 +79,7 @@ Module Program
               insertCmd.Parameters.AddWithValue("@weightTons", req.WeightTons)
               insertCmd.Parameters.AddWithValue("@updatedAt", DateTime.Now.ToString("o"))
               insertCmd.ExecuteNonQuery()
-              Task.Run(Sub() WriteAuditLog(connectionString, 0, "ブロック追加", $"新規ブロック登録: {req.BlockCode}"))
+              Task.Run(Sub() WriteAuditLog(0, "ブロック追加", $"新規ブロック登録: {req.BlockCode}"))
               Return Results.Ok("登録が完了しました。")
             End Using
           End Using
@@ -155,7 +92,7 @@ Module Program
             command.Parameters.AddWithValue("@id", id)
             Dim rowAffected As Integer = Command.ExecuteNonQuery()
             If rowAffected > 0 Then
-              Task.Run(Sub() WriteAuditLog(connectionString, 0, "ブロック削除", $"削除ブロック：{id}"))
+              Task.Run(Sub() WriteAuditLog(0, "ブロック削除", $"削除ブロック：{id}"))
               Return Results.Ok("削除されました。")
             Else
               Return Results.NotFound($"ID: {id}は見つかりませんでした。")
@@ -211,7 +148,7 @@ Module Program
                 Return Results.Problem("更新に失敗しました。")
               End If
             End Using
-            Task.Run(Sub() WriteAuditLog(connectionString, req.Id, "ステータス更新", $"新しいステータス: {req.Status}"))
+            Task.Run(Sub() WriteAuditLog(req.Id, "ステータス更新", $"新しいステータス: {req.Status}"))
             Return Results.Ok("更新が完了しました。")
           End Using
         End Function)
@@ -302,15 +239,14 @@ Module Program
     End Sub
 
     Function GetConnection() As SqliteConnection
-      Dim conn As New SqliteConnection(connectionString)
+      Dim conn As New SqliteConnection(Database.connectionString)
       conn.Open()
       Return conn
     End Function
 
     ' ログ書き込み用のSub関数(非同期)
-    Private Sub WriteAuditLog(connectionString As String, blockId As Integer, actionType As String, details As String)
-        Using conn As New SqliteConnection(connectionString)
-            conn.Open()
+    Private Sub WriteAuditLog(blockId As Integer, actionType As String, details As String)
+        Using conn As SqliteConnection = Database.GetConnection()
             Dim command = conn.CreateCommand()
             command.CommandText = "
               INSERT INTO AuditLogs (BlockId, ActionType, Details) VALUES (@blockId, @actionType, @details)
