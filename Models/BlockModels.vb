@@ -32,3 +32,10 @@ Public Class BatchUpdateStatusRequest
     Public Property BlockIds As List(Of Integer)
     Public Property Status As String
 End Class
+
+Public Class BlockRequest
+    Public Property BlockId As Integer
+    Public Property BlockCode As String
+    Public Property Status As String
+    Public Property DaysInStatus As Double
+End Class

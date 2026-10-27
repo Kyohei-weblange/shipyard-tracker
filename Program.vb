@@ -9,6 +9,7 @@ Module Program
     Sub Main(args As String())
         Dim builder = WebApplication.CreateBuilder(args)
         Dim app = builder.Build()
+        Dim connectionString As String = "Data Source = shipyard.db"
 
         app.UseDefaultFiles()
         app.UseStaticFiles()
@@ -233,6 +234,35 @@ Module Program
             End Using
             Return Results.Ok(New With { Key .totalBlocks = totalBlocks, Key .totalWeightTons = totalWeightTons, Key .statusSummary = statusSummary, Key .bottleneckProcess = bottleneckProcess})
           End Using
+        End Function)
+
+        ' リードタイム分析
+        app.MapGet("/api/blocks/lead-time", Async Function() As Task(Of IResult)
+          Dim blockList As New List(Of BlockRequest)
+          Using connection As New SqliteConnection(connectionString)
+            Await connection.OpenAsync()
+            Dim command = connection.CreateCommand()
+            command.CommandText = "
+              SELECT
+                Id As BlockId,
+                BlockCode,
+                Status,
+                ROUND(julianday('now') - julianday(UpdatedAt), 1) As DaysInStatus
+              FROM
+                ShipBlocks
+            "
+            Using reader = Await command.ExecuteReaderAsync()
+              While Await reader.ReadAsync()
+                blockList.Add(New BlockRequest With {
+                  .BlockId = reader.GetInt32(0),
+                  .BlockCode = reader.GetString(1),
+                  .Status = reader.GetString(2),
+                  .DaysInStatus = reader.GetDouble(3)
+                })
+              End While
+            End Using
+          End Using
+          Return Results.Ok(blockList)
         End Function)
 
         app.Run()
