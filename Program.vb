@@ -78,7 +78,7 @@ Module Program
               insertCmd.Parameters.AddWithValue("@processName", req.ProcessName)
               insertCmd.Parameters.AddWithValue("@status", "未着手")
               insertCmd.Parameters.AddWithValue("@weightTons", req.WeightTons)
-              insertCmd.Parameters.AddWithValue("@updatedAt", DateTime.Now.ToString("o"))
+              insertCmd.Parameters.AddWithValue("@updatedAt", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"))
               insertCmd.ExecuteNonQuery()
               Task.Run(Sub() WriteAuditLog(0, "ブロック追加", $"新規ブロック登録: {req.BlockCode}"))
               Return Results.Ok("登録が完了しました。")
@@ -143,7 +143,7 @@ Module Program
               "
               updateCmd.Parameters.AddWithValue("@id", req.Id)
               updateCmd.Parameters.AddWithValue("@status", req.Status)
-              updateCmd.Parameters.AddWithValue("@updatedAt", DateTime.Now.ToString("o"))
+              updateCmd.Parameters.AddWithValue("@updatedAt", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"))
               Dim rows = updateCmd.ExecuteNonQuery()
               If rows = 0 Then
                 Return Results.Problem("更新に失敗しました。")
@@ -176,7 +176,7 @@ Module Program
                     Id = @id
                 "
                 command.Parameters.AddWithValue("@status", req.Status)
-                command.Parameters.AddWithValue("@updatedAt", DateTime.Now)
+                command.Parameters.AddWithValue("@updatedAt", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"))
                 command.Parameters.AddWithValue("@id", blockId)
                 updatedCount += command.ExecuteNonQuery()
               Next
