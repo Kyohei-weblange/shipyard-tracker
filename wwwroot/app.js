@@ -170,6 +170,7 @@ function renderTable() {
     const processName = block.processName ?? "-";
     const weightTons = block.weightTons ?? 0;
     const status = block.status ?? "未着手";
+    const daysInStatus = block.daysInStatus ?? 0; // 滞留日数
     const rawUpdatedAt = block.updatedAt ?? "";
     const formattedUpdatedAt = formatDate(rawUpdatedAt);
     const badgeClass = getStatusBadgeClass(status);
@@ -191,6 +192,7 @@ function renderTable() {
               <option value="完成" ${status === "完成" ? "selected" : ""}>完成</option>
           </select>
       </td>
+      <td><strong>${daysInStatus} 日</strong></td>
       <td>${formattedUpdatedAt}</td>
       <td>
           <button onclick="updateStatus(${id}, '${rawUpdatedAt}')">更新</button>

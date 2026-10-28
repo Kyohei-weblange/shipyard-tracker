@@ -15,7 +15,7 @@ Imports System.Reflection
 <Assembly: System.Reflection.AssemblyCompanyAttribute("ShipyardTracker"),  _
  Assembly: System.Reflection.AssemblyConfigurationAttribute("Debug"),  _
  Assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0"),  _
- Assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+bebdae7baacfa152ae712480e85f4678a41c3241"),  _
+ Assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e54a5d4aeb5d19837eb1d3d42ec99721f209482f"),  _
  Assembly: System.Reflection.AssemblyProductAttribute("ShipyardTracker"),  _
  Assembly: System.Reflection.AssemblyTitleAttribute("ShipyardTracker"),  _
  Assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")> 
